@@ -2,7 +2,10 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+  >
 
   <title>SHUTTER & CAGE</title>
 
@@ -13,7 +16,8 @@
       padding: 0;
     }
 
-    html, body {
+    html,
+    body {
       width: 100%;
       height: 100%;
       overflow: hidden;
@@ -99,6 +103,7 @@
       display: none;
       z-index: 6;
       white-space: nowrap;
+      pointer-events: none;
     }
 
     #camera-status-ui {
@@ -113,6 +118,7 @@
       border-radius: 8px;
       border: 1px solid #00aaaa;
       z-index: 5;
+      pointer-events: none;
     }
 
     #alert-status {
@@ -197,9 +203,15 @@
       color: #fff;
       text-align: center;
       padding: 20px;
+      pointer-events: auto;
     }
 
     .action-btn {
+      position: relative;
+      z-index: 100001;
+      pointer-events: auto;
+      touch-action: manipulation;
+
       padding: 12px 35px;
       font-size: 16px;
       background: #00ffcc;
@@ -211,7 +223,6 @@
       margin-top: 15px;
       box-shadow: 0 0 15px #00ffcc;
       transition: transform 0.2s;
-      touch-action: manipulation;
     }
 
     .action-btn:hover {
@@ -292,6 +303,7 @@
       font-weight: bold;
       transition: all 0.2s;
       touch-action: manipulation;
+      pointer-events: auto;
     }
 
     .floor-btn:hover {
@@ -411,9 +423,11 @@
       font-family: Arial,sans-serif;
       font-size: 20px;
       padding: 30px;
+      pointer-events: auto;
     }
 
     @media (max-width: 900px), (pointer: coarse) {
+
       #mobile-controls {
         display: block;
       }
@@ -463,6 +477,7 @@
 
       .modal-screen {
         overflow: auto;
+        -webkit-overflow-scrolling: touch;
       }
 
       .guide-box {
@@ -473,9 +488,16 @@
       #start-screen h1 {
         font-size: 26px !important;
       }
+
+      #start-btn {
+        min-width: 180px;
+        min-height: 52px;
+        font-size: 18px;
+      }
     }
 
     @media (orientation: portrait) and (max-width: 900px) {
+
       #rotate-device {
         display: flex;
       }
@@ -494,7 +516,9 @@
   </style>
 
   <!-- Three.js -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script
+    src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"
+  ></script>
 </head>
 
 <body>
@@ -507,9 +531,20 @@
   <!-- ===== 上部UI ===== -->
 
   <div id="ui-top">
-    <div>フロア: <span id="floor-ui">1F</span></div>
-    <div>パーツ: <span id="parts-count">0</span> / 10</div>
-    <div>TIME: <span id="timer-ui">00:00</span></div>
+    <div>
+      フロア:
+      <span id="floor-ui">1F</span>
+    </div>
+
+    <div>
+      パーツ:
+      <span id="parts-count">0</span> / 10
+    </div>
+
+    <div>
+      TIME:
+      <span id="timer-ui">00:00</span>
+    </div>
   </div>
 
   <div id="camera-status-ui">
@@ -528,6 +563,7 @@
   <!-- ===== CCTV ===== -->
 
   <div id="cctv-overlay">
+
     <div id="cctv-header">
       ● REC - NIGHT VISION CCTV
       [<span id="cctv-floor-name">1F</span>]
@@ -536,6 +572,7 @@
     <div id="cctv-controls">
       [A/Dまたは←/→]: 階層切替　|　[E]: 監視終了
     </div>
+
   </div>
 
   <!-- ===== エレベーター ===== -->
@@ -546,23 +583,38 @@
 
     <div class="floor-btn-grid">
 
-      <button class="floor-btn" onclick="selectFloor(0)">
+      <button
+        class="floor-btn"
+        onclick="selectFloor(0)"
+      >
         1階 (1F)
       </button>
 
-      <button class="floor-btn" onclick="selectFloor(1)">
+      <button
+        class="floor-btn"
+        onclick="selectFloor(1)"
+      >
         2階 (2F)
       </button>
 
-      <button class="floor-btn" onclick="selectFloor(2)">
+      <button
+        class="floor-btn"
+        onclick="selectFloor(2)"
+      >
         3階 (3F)
       </button>
 
-      <button class="floor-btn" onclick="selectFloor(3)">
+      <button
+        class="floor-btn"
+        onclick="selectFloor(3)"
+      >
         4階 (4F)
       </button>
 
-      <button class="floor-btn" onclick="selectFloor(4)">
+      <button
+        class="floor-btn"
+        onclick="selectFloor(4)"
+      >
         5階 (5F)
       </button>
 
@@ -582,7 +634,13 @@
 
   <div id="start-screen" class="modal-screen">
 
-    <h1 style="letter-spacing:3px;color:#00ffcc;font-size:32px;">
+    <h1
+      style="
+        letter-spacing:3px;
+        color:#00ffcc;
+        font-size:32px;
+      "
+    >
       SHUTTER & CAGE
     </h1>
 
@@ -591,6 +649,7 @@
       <h3>【ミッション手順】</h3>
 
       <ul>
+
         <li>
           1. 各階（全5階・各2個）に落ちている
           <span>黄色い罠パーツを10個</span>
@@ -608,6 +667,7 @@
           <span>怪異を誘い込んで捕獲</span>
           すればミッションクリア！
         </li>
+
       </ul>
 
     </div>
@@ -669,7 +729,11 @@
 
     </div>
 
-    <button id="start-btn" class="action-btn">
+    <button
+      id="start-btn"
+      class="action-btn"
+      type="button"
+    >
       作戦開始
     </button>
 
@@ -680,7 +744,10 @@
   <div
     id="gameover-screen"
     class="modal-screen"
-    style="display:none;background:rgba(20,0,0,0.95);"
+    style="
+      display:none;
+      background:rgba(20,0,0,0.95);
+    "
   >
 
     <h1 style="color:#ff2233;font-size:42px;">
@@ -703,7 +770,10 @@
 
   <!-- ===== スマホ操作 ===== -->
 
-  <div id="mobile-controls" aria-hidden="true">
+  <div
+    id="mobile-controls"
+    aria-hidden="true"
+  >
 
     <div id="mobile-look"></div>
 
@@ -711,19 +781,35 @@
       <div id="mobile-stick"></div>
     </div>
 
-    <button id="mobile-run" class="mobile-btn">
+    <button
+      id="mobile-run"
+      class="mobile-btn"
+      type="button"
+    >
       走る
     </button>
 
-    <button id="mobile-e" class="mobile-btn">
+    <button
+      id="mobile-e"
+      class="mobile-btn"
+      type="button"
+    >
       E
     </button>
 
-    <button id="mobile-f" class="mobile-btn">
+    <button
+      id="mobile-f"
+      class="mobile-btn"
+      type="button"
+    >
       F
     </button>
 
-    <button id="mobile-trap" class="mobile-btn">
+    <button
+      id="mobile-trap"
+      class="mobile-btn"
+      type="button"
+    >
       罠
     </button>
 
@@ -738,7 +824,10 @@
   <div
     id="clear-screen"
     class="modal-screen"
-    style="display:none;background:rgba(0,20,15,0.95);"
+    style="
+      display:none;
+      background:rgba(0,20,15,0.95);
+    "
   >
 
     <h1 style="color:#00ffcc;font-size:42px;">
@@ -749,7 +838,13 @@
       怪異の捕獲に成功した！
     </p>
 
-    <p style="margin-top:15px;font-size:20px;color:#00ffcc;">
+    <p
+      style="
+        margin-top:15px;
+        font-size:20px;
+        color:#00ffcc;
+      "
+    >
       クリアタイム:
       <span id="final-time">00:00</span>
     </p>
@@ -766,21 +861,21 @@
   <!-- ===== 縦画面案内 ===== -->
 
   <div id="rotate-device">
+
     📱 ↔️
+
     <br><br>
+
     スマホを横向きにしてください
+
     <br>
+
     <small>
       横画面にするとゲームを開始できます
     </small>
+
   </div>
 
-
-  <!-- =====================================================
-       GAME JAVASCRIPT
-       この中に全部入っています。
-       外部 .js ファイルは不要です。
-       ===================================================== -->
 
   <script>
 
@@ -793,24 +888,42 @@
 
 
     /* =====================================================
-       ゲーム開始
+       Three.js読み込み後にゲーム開始
        ===================================================== */
 
-    window.addEventListener('DOMContentLoaded', function () {
+    window.addEventListener(
+      'DOMContentLoaded',
+      function() {
 
-      if (typeof THREE === 'undefined') {
+        const startButton =
+          document.getElementById('start-btn');
 
-        alert(
-          'Three.jsの読み込みに失敗しました。\\n' +
-          'インターネット接続を確認してください。'
-        );
+        /*
+         * Three.jsが読み込まれる前でも
+         * ボタンを押せない状態にはしない。
+         */
 
-        return;
+        if (
+          typeof THREE === 'undefined'
+        ) {
+
+          console.error(
+            'Three.jsの読み込みに失敗しました。'
+          );
+
+          startButton.disabled = true;
+
+          startButton.innerText =
+            'ゲーム読み込み失敗';
+
+          return;
+
+        }
+
+        initGame();
+
       }
-
-      initGame();
-
-    });
+    );
 
 
     /* =====================================================
@@ -820,14 +933,17 @@
     function initGame() {
 
       const container =
-        document.getElementById('canvas-container');
+        document.getElementById(
+          'canvas-container'
+        );
 
 
       /* ===============================
          Three.js基本設定
          =============================== */
 
-      const scene = new THREE.Scene();
+      const scene =
+        new THREE.Scene();
 
       scene.background =
         new THREE.Color(0x0a0f18);
@@ -842,12 +958,14 @@
       const camera =
         new THREE.PerspectiveCamera(
           70,
-          window.innerWidth / window.innerHeight,
+          window.innerWidth /
+            window.innerHeight,
           0.1,
           120
         );
 
-      camera.rotation.order = 'YXZ';
+      camera.rotation.order =
+        'YXZ';
 
 
       const renderer =
@@ -861,7 +979,10 @@
       );
 
       renderer.setPixelRatio(
-        Math.min(window.devicePixelRatio, 2)
+        Math.min(
+          window.devicePixelRatio,
+          2
+        )
       );
 
       container.appendChild(
@@ -1324,9 +1445,7 @@
               CELL_SIZE / 2;
 
 
-            /* ===============================
-               壁
-               =============================== */
+            /* 壁 */
 
             if (val === 1) {
 
@@ -1357,9 +1476,7 @@
             }
 
 
-            /* ===============================
-               柱
-               =============================== */
+            /* 柱 */
 
             else if (val === 2) {
 
@@ -1391,9 +1508,7 @@
             }
 
 
-            /* ===============================
-               ドア
-               =============================== */
+            /* ドア */
 
             else if (val === 3) {
 
@@ -1517,7 +1632,6 @@
                 });
 
               }
-
 
               else {
 
@@ -1670,7 +1784,8 @@
 
                 panel: doorPanel,
 
-                isHorizontal: isHorizontal,
+                isHorizontal:
+                  isHorizontal,
 
                 box: new THREE.Box3()
                   .setFromObject(doorPanel)
@@ -1680,9 +1795,7 @@
             }
 
 
-            /* ===============================
-               CCTVコンソール
-               =============================== */
+            /* CCTV */
 
             else if (val === 4) {
 
@@ -1720,9 +1833,7 @@
             }
 
 
-            /* ===============================
-               エレベーター
-               =============================== */
+            /* エレベーター */
 
             else if (val === 5) {
 
@@ -1836,57 +1947,59 @@
         });
 
 
-      itemSpawns.forEach(function(p) {
+      itemSpawns.forEach(
+        function(p) {
 
-        const x =
-          p.c * CELL_SIZE -
-          MAP_HALF +
-          CELL_SIZE / 2;
-
-
-        const z =
-          p.r * CELL_SIZE -
-          MAP_HALF +
-          CELL_SIZE / 2;
+          const x =
+            p.c * CELL_SIZE -
+            MAP_HALF +
+            CELL_SIZE / 2;
 
 
-        const y =
-          p.fl * FLOOR_HEIGHT +
-          1.0;
+          const z =
+            p.r * CELL_SIZE -
+            MAP_HALF +
+            CELL_SIZE / 2;
 
 
-        const partMesh =
-          new THREE.Mesh(
-            partGeo,
-            partMat
-          );
+          const y =
+            p.fl * FLOOR_HEIGHT +
+            1.0;
 
 
-        partMesh.position.set(
-          x,
-          y,
-          z
-        );
+          const partMesh =
+            new THREE.Mesh(
+              partGeo,
+              partMat
+            );
 
 
-        scene.add(partMesh);
-
-
-        items.push({
-
-          mesh: partMesh,
-
-          pos: new THREE.Vector3(
+          partMesh.position.set(
             x,
             y,
             z
-          ),
+          );
 
-          collected: false
 
-        });
+          scene.add(partMesh);
 
-      });
+
+          items.push({
+
+            mesh: partMesh,
+
+            pos: new THREE.Vector3(
+              x,
+              y,
+              z
+            ),
+
+            collected: false
+
+          });
+
+        }
+      );
 
 
       /* =====================================================
@@ -1912,7 +2025,8 @@
         );
 
 
-      monsterCore.position.y = 1.2;
+      monsterCore.position.y =
+        1.2;
 
 
       const monsterLight =
@@ -1923,7 +2037,8 @@
         );
 
 
-      monsterLight.position.y = 1.2;
+      monsterLight.position.y =
+        1.2;
 
 
       monsterGroup.add(monsterCore);
@@ -1965,7 +2080,8 @@
 
       trap.mesh.add(cageBase);
 
-      trap.mesh.visible = false;
+      trap.mesh.visible =
+        false;
 
       scene.add(trap.mesh);
 
@@ -2114,7 +2230,7 @@
 
 
         knob.style.transform =
-          'translate(0,0)';
+          'translate(-50%,-50%)';
 
 
         mobileKeys.KeyW = false;
@@ -2439,7 +2555,8 @@
 
           e.preventDefault();
 
-          mobileKeys.ShiftLeft = true;
+          mobileKeys.ShiftLeft =
+            true;
 
         }
       );
@@ -2449,7 +2566,8 @@
         'pointerup',
         function() {
 
-          mobileKeys.ShiftLeft = false;
+          mobileKeys.ShiftLeft =
+            false;
 
         }
       );
@@ -2459,7 +2577,8 @@
         'pointercancel',
         function() {
 
-          mobileKeys.ShiftLeft = false;
+          mobileKeys.ShiftLeft =
+            false;
 
         }
       );
@@ -2469,7 +2588,8 @@
         'pointerleave',
         function() {
 
-          mobileKeys.ShiftLeft = false;
+          mobileKeys.ShiftLeft =
+            false;
 
         }
       );
@@ -2660,45 +2780,116 @@
         );
 
 
-      startButton.addEventListener(
-        'click',
-        function(e) {
-
-          e.preventDefault();
-
-          e.stopPropagation();
+      let gameStarted = false;
 
 
-          document
-            .getElementById(
-              'start-screen'
-            )
-            .style.display = 'none';
+      function startGame() {
+
+        if (gameStarted) {
+          return;
+        }
 
 
-          state.startTime =
-            Date.now();
+        gameStarted = true;
 
 
-          if (!isTouchDevice) {
+        const startScreen =
+          document.getElementById(
+            'start-screen'
+          );
 
-            try {
+
+        startScreen.style.display =
+          'none';
+
+
+        state.startTime =
+          Date.now();
+
+
+        /*
+         * PCだけポインターロック。
+         * スマホでは不要。
+         */
+
+        if (!isTouchDevice) {
+
+          try {
+
+            if (
+              document.body.requestPointerLock
+            ) {
 
               document.body.requestPointerLock();
 
             }
 
-            catch (error) {
+          }
 
-              console.log(
-                'PointerLock unavailable:',
-                error
-              );
+          catch (error) {
 
-            }
+            console.log(
+              'PointerLock unavailable:',
+              error
+            );
 
           }
 
+        }
+
+      }
+
+
+      /*
+       * PCクリック
+       */
+
+      startButton.addEventListener(
+        'click',
+        function(e) {
+
+          e.preventDefault();
+          e.stopPropagation();
+
+          startGame();
+
+        }
+      );
+
+
+      /*
+       * スマホ・タブレット
+       */
+
+      startButton.addEventListener(
+        'pointerup',
+        function(e) {
+
+          e.preventDefault();
+          e.stopPropagation();
+
+          startGame();
+
+        }
+      );
+
+
+      /*
+       * iPhone / Android向け
+       */
+
+      startButton.addEventListener(
+        'touchend',
+        function(e) {
+
+          e.preventDefault();
+          e.stopPropagation();
+
+          startGame();
+
+        },
+        {
+          passive: false
         }
       );
 
@@ -2925,13 +3116,15 @@
           );
 
 
-        flash.style.opacity = '1';
+        flash.style.opacity =
+          '1';
 
 
         setTimeout(
           function() {
 
-            flash.style.opacity = '0';
+            flash.style.opacity =
+              '0';
 
           },
           100
@@ -3662,7 +3855,7 @@
                     'parts-count'
                   )
                   .innerText =
-                    state.trapParts;
+                  state.trapParts;
 
 
                 if (
@@ -3948,7 +4141,7 @@
                   'gameover-screen'
                 )
                 .style.display =
-                  'flex';
+                'flex';
 
 
               if (
