@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>SHUTTER & CAGE</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { overflow: hidden; background: #0a0f18; font-family: 'Segoe UI', sans-serif; user-select: none; }
+    #canvas-container { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; }
+    canvas { display: block; width: 100%; height: 100%; }
+
+    #crosshair {
+      position: absolute; top: 50%; left: 50%; width: 6px; height: 6px;
+      background: rgba(255, 255, 255, 0.8); border-radius: 50%;
+      transform: translate(-50%, -50%); pointer-events: none; z-index: 5;
+    }
+
+    #flash {
+      position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+      background: white; opacity: 0; pointer-events: none; z-index: 10; transition: opacity 0.08s ease-out;
+    }
+
+    #ui-top {
+      position: absolute; top: 20px; left: 20px; color: #00ffcc;
+      font-family: monospace; font-size: 14px; pointer-events: none; z-index: 5;
+      background: rgba(0,0,0,0.75); padding: 12px 18px; border-radius: 8px; border: 1px solid #00aaaa;
+      display: flex; gap: 15px;
+    }
+
+    #action-prompt {
+      position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%);
+      color: #00ffcc; font-family: monospace; font-size: 18px; font-weight: bold;
+      background: rgba(0,0,0,0.85); padding: 10px 20px; border-radius: 8px;
+      border: 2px solid #00ffcc; text-shadow: 0 0 8px #00ffcc; display: none; z-index: 6;
+    }
+
+    #camera-status-ui {
+      position: absolute; bottom: 20px; left: 20px; color: #00ffcc;
+      font-family: monospace; font-size: 14px; background: rgba(0,0,0,0.75);
+      padding: 10px 16px; border-radius: 8px; border: 1px solid #00aaaa; z-index: 5;
+    }
+
+    #alert-status {
+      position: absolute; top: 20px; right: 20px; font-family: monospace; font-size: 15px;
+      font-weight: bold; color: #00ffcc; pointer-events: none; z-index: 5;
+      background: rgba(0,0,0,0.75); padding: 10px 16px; border-radius: 8px; border: 1px solid #00aaaa;
+    }
+
+    #cctv-overlay {
+      position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%),
+                  linear-gradient(90deg, rgba(0, 255, 150, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 150, 255, 0.03));
+      background-size: 100% 4px, 6px 100%;
+      pointer-events: none; display: none; z-index: 15;
+      border: 20px solid #111; box-shadow: inset 0 0 100px rgba(0,255,150,0.3);
+    }
+    #cctv-header {
+      position: absolute; top: 30px; left: 40px; color: #00ffcc; font-family: monospace; font-size: 22px;
+      text-shadow: 0 0 10px #00ffcc;
+    }
+    #cctv-controls {
+      position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
+      color: #00ffcc; font-family: monospace; font-size: 16px; background: rgba(0,10,5,0.9);
+      padding: 10px 25px; border-radius: 8px; border: 1px solid #00ffcc; text-shadow: 0 0 5px #00ffcc;
+    }
+
+    .modal-screen {
+      position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(10,15,24,0.96); z-index: 20; display: flex; flex-direction: column;
+      justify-content: center; align-items: center; color: #fff; text-align: center; padding: 20px;
+    }
+    .action-btn {
+      padding: 12px 35px; font-size: 16px; background: #00ffcc; color: #000; border: none;
+      border-radius: 25px; cursor: pointer; font-weight: bold; margin-top: 15px;
+      box-shadow: 0 0 15px #00ffcc; transition: transform 0.2s;
+    }
+    .action-btn:hover { transform: scale(1.05); }
+
+    .guide-box {
+      background: rgba(0,255,204,0.05); border: 1px solid #00ffcc; border-radius: 8px;
+      padding: 12px 20px; margin-top: 12px; text-align: left; max-width: 600px; width: 100%;
+    }
+    .guide-box h3 { color: #00ffcc; font-size: 15px; margin-bottom: 6px; border-bottom: 1px dashed #00ffcc; padding-bottom: 4px; }
+    .guide-box ul { list-style: none; font-size: 13px; line-height: 1.6; color: #ddd; }
+    .guide-box ul li span { color: #00ffcc; font-weight: bold; }
+
+    #elevator-panel {
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      background: rgba(10, 20, 30, 0.95); border: 2px solid #00ffcc; border-radius: 12px;
+      padding: 25px 40px; text-align: center; z-index: 25; display: none;
+      box-shadow: 0 0 25px rgba(0, 255, 204, 0.4);
+    }
+    #elevator-panel h2 { color: #00ffcc; margin-bottom: 15px; font-size: 20px; }
+    .floor-btn-grid { display: flex; flex-direction: column-reverse; gap: 10px; margin-top: 10px; }
+    .floor-btn {
+      padding: 10px 30px; font-size: 16px; background: #1e293b; color: #00ffcc;
+      border: 1px solid #00ffcc; border-radius: 6px; cursor: pointer; font-weight: bold;
+      transition: all 0.2s;
+    }
+    .floor-btn:hover { background: #00ffcc; color: #000; box-shadow: 0 0 10px #00ffcc; }
+  </style>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+  <div id="canvas-container"></div>
+  <div id="crosshair"></div>
+  <div id="flash"></div>
+
+  <div id="ui-top">
+    <div>フロア: <span id="floor-ui">1F</span></div>
+    <div>パーツ: <span id="parts-count">0</span> / 10</div>
+    <div>TIME: <span id="timer-ui">00:00</span></div>
+  </div>
+
+  <div id="camera-status-ui">撮影用カメラ: <span id="cam-info" style="color:#ff5555;">未所持 (1F監視卓横)</span></div>
+  <div id="alert-status">警戒度: SAFE</div>
+  <div id="action-prompt"></div>
+
+  <div id="cctv-overlay">
+    <div id="cctv-header">● REC - NIGHT VISION CCTV [<span id="cctv-floor-name">1F</span>]</div>
+    <div id="cctv-controls">[A/Dまたは←/→]: 階層切替 | [E]: 監視終了</div>
+  </div>
+
+  <div id="elevator-panel">
+    <h2>エレベーター階数選択</h2>
+    <div class="floor-btn-grid">
+      <button class="floor-btn" onclick="selectFloor(0)">1階 (1F)</button>
+      <button class="floor-btn" onclick="selectFloor(1)">2階 (2F)</button>
+      <button class="floor-btn" onclick="selectFloor(2)">3階 (3F)</button>
+      <button class="floor-btn" onclick="selectFloor(3)">4階 (4F)</button>
+      <button class="floor-btn" onclick="selectFloor(4)">5階 (5F)</button>
+    </div>
+    <button class="action-btn" style="margin-top: 15px; padding: 6px 20px; font-size: 13px;" onclick="closeElevatorUI()">閉じる</button>
+  </div>
+
+  <div id="start-screen" class="modal-screen">
+    <h1 style="letter-spacing: 3px; color:#00ffcc; font-size: 32px;">SHUTTER & CAGE</h1>
+    
+    <div class="guide-box">
+      <h3>【ミッション手順】</h3>
+      <ul>
+        <li>1. 各階（全5階・各2個固定）に落ちている <span>黄色い罠パーツを10個</span> 集める。</li>
+        <li>2. 10個集めたら <span>[Space]</span> キーで床に罠を設置する。</li>
+        <li>3. 罠の上に <span>怪異を誘い込んで捕獲</span> すればミッションクリア！</li>
+      </ul>
+    </div>
+
+    <div class="guide-box">
+      <h3>【怪異の生態・注意事項】</h3>
+      <ul>
+        <li>・怪異は全5階を <span>一定時間ごとにランダム巡回</span> します（1階以外にも現れます！）。</li>
+        <li>・1階監視室の <span>[E] 監視カメラ</span> で各階の怪異の現在地を確認できます。</li>
+        <li>・扉を閉めても怪異は <span>扉を開けて侵入</span> してきます。</li>
+      </ul>
+    </div>
+
+    <div class="guide-box">
+      <h3>【基本操作】</h3>
+      <ul>
+        <li>・<span>移動:</span> [WASD] | <span>ダッシュ:</span> [Shift] | <span>視点:</span> マウス移動</li>
+        <li>・<span>調べる/操作:</span> [E] （ドア開閉・エレベーター・監視卓）</li>
+        <li>・<span>カメラ発光:</span> [F] | <span>罠設置:</span> [Space]</li>
+      </ul>
+    </div>
+
+    <button id="start-btn" class="action-btn">作戦開始</button>
+  </div>
+
+  <div id="gameover-screen" class="modal-screen" style="display:none; background: rgba(20,0,0,0.95);">
+    <h1 style="color: #ff2233; font-size: 42px;">YOU DIED</h1>
+    <p style="margin-top: 10px; color: #aaa;">怪異に捕まってしまった...</p>
+    <button onclick="location.reload()" class="action-btn" style="background:#ff2233;">再挑戦</button>
+  </div>
+
+  <div id="clear-screen" class="modal-screen" style="display:none; background: rgba(0,20,15,0.95);">
+    <h1 style="color: #00ffcc; font-size: 42px;">MISSION COMPLETE!</h1>
+    <p style="margin-top: 10px; color: #fff;">怪異の捕獲に成功した！</p>
+    <p style="margin-top: 15px; font-size: 20px; color: #00ffcc;">クリアタイム: <span id="final-time">00:00</span></p>
+    <button onclick="location.reload()" class="action-btn">もう一度プレイ</button>
+  </div>
+
+  <script>
+    let selectFloor, closeElevatorUI;
+
+    window.addEventListener('DOMContentLoaded', () => {
+      if (typeof THREE !== 'undefined') initGame();
+    });
+
+    function initGame() {
+      const container = document.getElementById('canvas-container');
+      const scene = new THREE.Scene();
+      
+      scene.background = new THREE.Color(0x0a0f18);
+      scene.fog = new THREE.FogExp2(0x0a0f18, 0.025);
+
+      const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 120);
+      camera.rotation.order = 'YXZ';
+
+      const renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      container.appendChild(renderer.domElement);
+
+      scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+
+      const cctvLight = new THREE.PointLight(0x00ffaa, 0, 45);
+      scene.add(cctvLight);
+
+      const flashlight = new THREE.SpotLight(0xffffff, 3.5, 35, Math.PI / 3, 0.5, 1);
+      scene.add(flashlight);
+      scene.add(flashlight.target);
+
+      const playerLight = new THREE.PointLight(0x88ccff, 1.2, 10);
+      scene.add(playerLight);
+
+      const NUM_FLOORS = 5;
+      const FLOOR_HEIGHT = 6.0;
+      const EYE_HEIGHT = 1.7;
+      const GRID_SIZE = 13;
+      const CELL_SIZE = 5.0;
+      const MAP_HALF = (GRID_SIZE * CELL_SIZE) / 2;
+
+      const DOOR_W = 1.6;
+      const DOOR_H = 2.8;
+      const DOOR_D = 0.15;
+      const WALL_H = FLOOR_HEIGHT * 0.85;
+
+      const FLOOR_MAPS = [
+        [
+          [1,1,1,1,1,1,1,1,1,1,1,1,1],
+          [1,4,0,1,0,0,0,0,0,0,0,0,1],
+          [1,0,0,3,0,0,0,0,0,0,0,0,1],
+          [1,1,1,1,0,0,1,0,0,2,0,0,1],
+          [1,0,0,0,0,0,1,0,0,0,0,0,1],
+          [1,1,3,1,1,0,0,0,1,1,3,1,1],
+          [1,0,0,0,0,0,5,0,0,0,0,0,1],
+          [1,1,3,1,1,0,0,0,1,1,3,1,1],
+          [1,0,0,0,0,0,1,0,0,0,0,0,1],
+          [1,0,0,2,0,0,1,0,0,2,0,0,1],
+          [1,0,0,0,0,0,3,0,0,0,0,0,1],
+          [1,0,0,0,0,0,1,0,0,0,0,0,1],
+          [1,1,1,1,1,1,1,1,1,1,1,1,1]
+        ],
+        [
+          [1,1,1,1,1,1,1,1,1,1,1,1,1],
+          [1,0,0,1,0,0,3,0,0,1,0,0,1],
+          [1,0,0,1,0,0,1,0,0,1,0,0,1],
+          [1,1,3,1,0,0,1,0,0,1,3,1,1],
+          [1,0,0,0,0,1,1,1,0,0,0,0,1],
+          [1,0,0,1,0,3,0,3,0,1,0,0,1],
+          [1,1,1,1,0,1,5,1,0,1,1,1,1],
+          [1,0,0,1,0,3,0,3,0,1,0,0,1],
+          [1,0,0,0,0,1,1,1,0,0,0,0,1],
+          [1,1,3,1,0,0,1,0,0,1,3,1,1],
+          [1,0,0,1,0,0,1,0,0,1,0,0,1],
+          [1,0,0,1,0,0,3,0,0,1,0,0,1],
+          [1,1,1,1,1,1,1,1,1,1,1,1,1]
+        ],
+        [
+          [1,1,1,1,1,1,1,1,1,1,1,1,1],
+          [1,1,1,1,0,0,0,0,0,1,1,1,1],
+          [1,1,1,1,0,0,0,0,0,1,1,1,1],
+          [1,1,1,1,0,1,3,1,0,1,1,1,1],
+          [1,0,0,0,0,1,0,1,0,0,0,0,1],
+          [1,0,0,1,1,1,0,1,1,1,0,0,1],
+          [1,0,0,3,0,0,5,0,0,3,0,0,1],
+          [1,0,0,1,1,1,0,1,1,1,0,0,1],
+          [1,0,0,0,0,1,0,1,0,0,0,0,1],
+          [1,1,1,1,0,1,3,1,0,1,1,1,1],
+          [1,1,1,1,0,0,0,0,0,1,1,1,1],
+          [1,1,1,1,0,0,0,0,0,1,1,1,1],
+          [1,1,1,1,1,1,1,1,1,1,1,1,1]
+        ],
+        [
+          [1,1,1,1,1,1,1,1,1,1,1,1,1],
+          [1,0,0,0,1,0,0,0,0,0,0,0,1],
+          [1,0,1,0,1,0,1,1,1,1,1,0,1],
+          [1,0,1,3,1,0,3,0,0,0,1,0,1],
+          [1,0,1,0,0,0,1,1,1,0,1,0,1],
+          [1,1,1,1,1,0,1,0,0,0,3,0,1],
+          [1,0,0,0,0,0,5,0,1,1,1,0,1],
+          [1,0,1,1,1,0,1,0,0,0,0,0,1],
+          [1,0,3,0,1,0,1,1,1,1,1,1,1],
+          [1,0,1,0,1,0,0,0,3,0,0,0,1],
+          [1,0,1,0,1,1,1,1,1,0,1,0,1],
+          [1,0,0,0,0,0,0,0,0,0,1,0,1],
+          [1,1,1,1,1,1,1,1,1,1,1,1,1]
+        ],
+        [
+          [1,1,1,1,1,1,1,1,1,1,1,1,1],
+          [1,0,0,0,0,0,0,0,0,0,0,0,1],
+          [1,0,1,1,1,1,3,1,1,1,1,0,1],
+          [1,0,1,0,0,0,0,0,0,0,1,0,1],
+          [1,0,1,0,2,0,0,0,2,0,1,0,1],
+          [1,0,1,0,0,0,0,0,0,0,1,0,1],
+          [1,0,3,0,0,0,5,0,0,0,3,0,1],
+          [1,0,1,0,0,0,0,0,0,0,1,0,1],
+          [1,0,1,0,2,0,0,0,2,0,1,0,1],
+          [1,0,1,0,0,0,0,0,0,0,1,0,1],
+          [1,0,1,1,1,1,3,1,1,1,1,0,1],
+          [1,0,0,0,0,0,0,0,0,0,0,0,1],
+          [1,1,1,1,1,1,1,1,1,1,1,1,1]
+        ]
+      ];
+
+      // パトロール用ウェイポイント（開けたメイン通路）
+      const patrolWaypoints = [
+        new THREE.Vector3(15, EYE_HEIGHT, -15),
+        new THREE.Vector3(-15, EYE_HEIGHT, -15),
+        new THREE.Vector3(-15, EYE_HEIGHT, 15),
+        new THREE.Vector3(15, EYE_HEIGHT, 15),
+        new THREE.Vector3(0, EYE_HEIGHT, 0)
+      ];
+
+      let state = {
+        hasCamera: false, cameraAmmo: 0,
+        trapParts: 0, trapCrafted: false, trapPlaced: false,
+        gameOver: false, gameClear: false,
+        inElevatorArea: false, elevatorOpen: false,
+        inCCTVArea: false, cctvActive: false, cctvFloor: 0,
+        activeDoor: null,
+        monsterState: 'patrol', stamina: 100,
+        startTime: 0, elapsedTime: 0
+      };
+
+      let player = {
+        pos: new THREE.Vector3(-10, EYE_HEIGHT, 0),
+        yaw: -Math.PI / 2, pitch: 0, speed: 5.5, floor: 0, radius: 0.5
+      };
+
+      // 怪物のデータ拡張（スタック判定＆フロア変更タイマー）
+      let monster = {
+        pos: new THREE.Vector3(15, EYE_HEIGHT, -15),
+        lastPos: new THREE.Vector3(15, EYE_HEIGHT, -15),
+        floor: 1, // 初期配置を2階に配置
+        speed: 3.8, radius: 0.6, stunTimer: 0,
+        patrolIndex: 0,
+        stuckTimer: 0,
+        floorChangeTimer: 15.0
+      };
+
+      let doors = [];
+      let items = [];
+      let collisionBoxes = [];
+      let elevatorPos = new THREE.Vector3(0, 0, 0);
+      let cctvConsolePos = new THREE.Vector3();
+
+      const wallMat = new THREE.MeshStandardMaterial({ color: 0x3a4b5c, roughness: 0.6 });
+      const floorMat = new THREE.MeshStandardMaterial({ color: 0x222d3a, roughness: 0.7 });
+      const ceilMat = new THREE.MeshStandardMaterial({ color: 0x182230, roughness: 0.8 });
+      const doorMat = new THREE.MeshStandardMaterial({ color: 0x6a452c, roughness: 0.4 });
+      const eleMat = new THREE.MeshStandardMaterial({ color: 0x0088cc, emissive: 0x002244, roughness: 0.2 });
+
+      for (let fl = 0; fl < NUM_FLOORS; fl++) {
+        const baseY = fl * FLOOR_HEIGHT;
+        const currentMap = FLOOR_MAPS[fl];
+
+        const floorMesh = new THREE.Mesh(new THREE.PlaneGeometry(GRID_SIZE * CELL_SIZE, GRID_SIZE * CELL_SIZE), floorMat);
+        floorMesh.rotation.x = -Math.PI / 2;
+        floorMesh.position.set(0, baseY, 0);
+        scene.add(floorMesh);
+
+        const ceilMesh = new THREE.Mesh(new THREE.PlaneGeometry(GRID_SIZE * CELL_SIZE, GRID_SIZE * CELL_SIZE), ceilMat);
+        ceilMesh.rotation.x = Math.PI / 2;
+        ceilMesh.position.set(0, baseY + WALL_H, 0);
+        scene.add(ceilMesh);
+
+        for (let r = 0; r < GRID_SIZE; r++) {
+          for (let c = 0; c < GRID_SIZE; c++) {
+            const val = currentMap[r][c];
+            const x = c * CELL_SIZE - MAP_HALF + CELL_SIZE / 2;
+            const z = r * CELL_SIZE - MAP_HALF + CELL_SIZE / 2;
+
+            if (val === 1) {
+              const wall = new THREE.Mesh(new THREE.BoxGeometry(CELL_SIZE, WALL_H, CELL_SIZE), wallMat);
+              wall.position.set(x, baseY + WALL_H / 2, z);
+              scene.add(wall);
+              collisionBoxes.push({ box: new THREE.Box3().setFromObject(wall), floor: fl });
+            } else if (val === 2) {
+              const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, WALL_H, 12), wallMat);
+              pillar.position.set(x, baseY + WALL_H / 2, z);
+              scene.add(pillar);
+              collisionBoxes.push({ box: new THREE.Box3().setFromObject(pillar), floor: fl });
+            } else if (val === 3) {
+              const isHorizontal = (c > 0 && currentMap[r][c-1] === 1) || (c < GRID_SIZE - 1 && currentMap[r][c+1] === 1);
+              
+              const topWallH = WALL_H - DOOR_H;
+              const topWall = new THREE.Mesh(
+                new THREE.BoxGeometry(isHorizontal ? CELL_SIZE : CELL_SIZE * 0.4, topWallH, isHorizontal ? CELL_SIZE * 0.4 : CELL_SIZE),
+                wallMat
+              );
+              topWall.position.set(x, baseY + DOOR_H + topWallH / 2, z);
+              scene.add(topWall);
+              collisionBoxes.push({ box: new THREE.Box3().setFromObject(topWall), floor: fl });
+
+              const sideW = (CELL_SIZE - DOOR_W) / 2;
+              if (isHorizontal) {
+                const w1 = new THREE.Mesh(new THREE.BoxGeometry(sideW, DOOR_H, CELL_SIZE * 0.4), wallMat);
+                w1.position.set(x - CELL_SIZE/2 + sideW/2, baseY + DOOR_H/2, z);
+                const w2 = new THREE.Mesh(new THREE.BoxGeometry(sideW, DOOR_H, CELL_SIZE * 0.4), wallMat);
+                w2.position.set(x + CELL_SIZE/2 - sideW/2, baseY + DOOR_H/2, z);
+                scene.add(w1, w2);
+                collisionBoxes.push({ box: new THREE.Box3().setFromObject(w1), floor: fl });
+                collisionBoxes.push({ box: new THREE.Box3().setFromObject(w2), floor: fl });
+              } else {
+                const w1 = new THREE.Mesh(new THREE.BoxGeometry(CELL_SIZE * 0.4, DOOR_H, sideW), wallMat);
+                w1.position.set(x, baseY + DOOR_H/2, z - CELL_SIZE/2 + sideW/2);
+                const w2 = new THREE.Mesh(new THREE.BoxGeometry(CELL_SIZE * 0.4, DOOR_H, sideW), wallMat);
+                w2.position.set(x, baseY + DOOR_H/2, z + CELL_SIZE/2 - sideW/2);
+                scene.add(w1, w2);
+                collisionBoxes.push({ box: new THREE.Box3().setFromObject(w1), floor: fl });
+                collisionBoxes.push({ box: new THREE.Box3().setFromObject(w2), floor: fl });
+              }
+
+              const doorPivot = new THREE.Group();
+              if (isHorizontal) {
+                doorPivot.position.set(x - DOOR_W / 2, baseY, z);
+              } else {
+                doorPivot.position.set(x, baseY, z - DOOR_W / 2);
+              }
+
+              const doorPanel = new THREE.Mesh(
+                new THREE.BoxGeometry(isHorizontal ? DOOR_W : DOOR_D, DOOR_H, isHorizontal ? DOOR_D : DOOR_W),
+                doorMat
+              );
+              if (isHorizontal) {
+                doorPanel.position.set(DOOR_W / 2, DOOR_H / 2, 0);
+              } else {
+                doorPanel.position.set(0, DOOR_H / 2, DOOR_W / 2);
+              }
+              doorPivot.add(doorPanel);
+              scene.add(doorPivot);
+
+              doors.push({
+                group: doorPivot,
+                isOpen: false,
+                floor: fl,
+                pos: new THREE.Vector3(x, baseY + EYE_HEIGHT, z),
+                panel: doorPanel,
+                isHorizontal: isHorizontal,
+                box: new THREE.Box3().setFromObject(doorPanel)
+              });
+            } else if (val === 4) {
+              const consoleMesh = new THREE.Mesh(new THREE.BoxGeometry(1.6, 1.1, 0.7), new THREE.MeshStandardMaterial({ color: 0x111111, emissive: 0x004433 }));
+              consoleMesh.position.set(x, baseY + 0.55, z);
+              scene.add(consoleMesh);
+              cctvConsolePos.set(x, baseY, z);
+            } else if (val === 5) {
+              const elePad = new THREE.Mesh(new THREE.BoxGeometry(CELL_SIZE * 0.6, 0.1, CELL_SIZE * 0.6), eleMat);
+              elePad.position.set(x, baseY + 0.05, z);
+              scene.add(elePad);
+              if (fl === 0) elevatorPos.set(x, 0, z);
+            }
+          }
+        }
+      }
+
+      // 1階監視卓の横に固定配置されたカメラ
+      const camGroup = new THREE.Group();
+      camGroup.add(new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.35, 0.3), new THREE.MeshStandardMaterial({ color: 0x222222, emissive: 0x00ffcc, emissiveIntensity: 0.6 })));
+      camGroup.position.set(-23.5, 1.0, -25);
+      scene.add(camGroup);
+
+      const itemSpawns = [
+        { fl: 0, r: 1, c: 2 }, { fl: 0, r: 11, c: 10 },
+        { fl: 1, r: 1, c: 1 }, { fl: 1, r: 11, c: 11 },
+        { fl: 2, r: 1, c: 6 }, { fl: 2, r: 11, c: 6 },
+        { fl: 3, r: 1, c: 11 }, { fl: 3, r: 11, c: 1 },
+        { fl: 4, r: 1, c: 1 }, { fl: 4, r: 11, c: 11 }
+      ];
+
+      const partGeo = new THREE.OctahedronGeometry(0.35);
+      const partMat = new THREE.MeshStandardMaterial({ color: 0xffcc00, emissive: 0xffaa00 });
+
+      itemSpawns.forEach(p => {
+        const x = p.c * CELL_SIZE - MAP_HALF + CELL_SIZE / 2;
+        const z = p.r * CELL_SIZE - MAP_HALF + CELL_SIZE / 2;
+        const y = p.fl * FLOOR_HEIGHT + 1.0;
+
+        const partMesh = new THREE.Mesh(partGeo, partMat);
+        partMesh.position.set(x, y, z);
+        scene.add(partMesh);
+        items.push({ mesh: partMesh, pos: new THREE.Vector3(x, y, z), collected: false });
+      });
+
+      const monsterGroup = new THREE.Group();
+      const monsterCore = new THREE.Mesh(new THREE.IcosahedronGeometry(0.8, 1), new THREE.MeshStandardMaterial({ color: 0xff0022, emissive: 0xff0000, emissiveIntensity: 0.8 }));
+      monsterCore.position.y = 1.2;
+      const monsterLight = new THREE.PointLight(0xff0000, 2, 8);
+      monsterLight.position.y = 1.2;
+      monsterGroup.add(monsterCore);
+      monsterGroup.add(monsterLight);
+      scene.add(monsterGroup);
+
+      let trap = { active: false, pos: new THREE.Vector3(), mesh: new THREE.Group() };
+      const cageBase = new THREE.Mesh(new THREE.CylinderGeometry(1.8, 1.8, 0.1, 16), new THREE.MeshStandardMaterial({ color: 0x00ffcc, emissive: 0x00ffcc }));
+      trap.mesh.add(cageBase);
+      trap.mesh.visible = false;
+      scene.add(trap.mesh);
+
+      function formatTime(seconds) {
+        const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+        const s = Math.floor(seconds % 60).toString().padStart(2, '0');
+        return `${m}:${s}`;
+      }
+
+      let keys = {};
+      window.addEventListener('keydown', (e) => {
+        keys[e.code] = true;
+
+        if (e.code === 'KeyE' && !state.elevatorOpen) {
+          e.preventDefault();
+          if (state.cctvActive) {
+            toggleCCTV(false);
+          } else if (state.inCCTVArea) {
+            toggleCCTV(true);
+          } else if (state.inElevatorArea) {
+            openElevatorUI();
+          } else if (state.activeDoor) {
+            toggleDoor(state.activeDoor);
+          }
+        }
+
+        if (state.cctvActive) {
+          if (e.code === 'KeyA' || e.code === 'ArrowLeft') {
+            state.cctvFloor = (state.cctvFloor + 4) % 5;
+            document.getElementById('cctv-floor-name').innerText = `${state.cctvFloor + 1}F`;
+          }
+          if (e.code === 'KeyD' || e.code === 'ArrowRight') {
+            state.cctvFloor = (state.cctvFloor + 1) % 5;
+            document.getElementById('cctv-floor-name').innerText = `${state.cctvFloor + 1}F`;
+          }
+        }
+
+        if (e.code === 'KeyF' && !state.elevatorOpen && !state.cctvActive) {
+          e.preventDefault();
+          useCamera();
+        }
+
+        if (e.code === 'Space' && !state.elevatorOpen && !state.cctvActive) {
+          e.preventDefault();
+          placeTrap();
+        }
+      });
+      window.addEventListener('keyup', (e) => { keys[e.code] = false; });
+
+      document.addEventListener('mousemove', (e) => {
+        if (document.pointerLockElement === document.body && !state.elevatorOpen && !state.cctvActive) {
+          player.yaw -= e.movementX * 0.0022;
+          player.pitch -= e.movementY * 0.0022;
+          player.pitch = Math.max(-Math.PI / 2.3, Math.min(Math.PI / 2.3, player.pitch));
+        }
+      });
+
+      document.getElementById('start-btn').addEventListener('click', () => {
+        document.getElementById('start-screen').style.display = 'none';
+        state.startTime = Date.now();
+        try { document.body.requestPointerLock(); } catch(e) {}
+      });
+
+      function toggleCCTV(active) {
+        state.cctvActive = active;
+        document.getElementById('cctv-overlay').style.display = active ? 'block' : 'none';
+        if (active) {
+          state.cctvFloor = player.floor;
+          document.getElementById('cctv-floor-name').innerText = `${state.cctvFloor + 1}F`;
+          document.exitPointerLock();
+        } else {
+          cctvLight.intensity = 0;
+          try { document.body.requestPointerLock(); } catch(e) {}
+        }
+      }
+
+      function openElevatorUI() {
+        state.elevatorOpen = true;
+        document.getElementById('elevator-panel').style.display = 'block';
+        document.exitPointerLock();
+      }
+
+      closeElevatorUI = function() {
+        state.elevatorOpen = false;
+        document.getElementById('elevator-panel').style.display = 'none';
+        try { document.body.requestPointerLock(); } catch(e) {}
+      };
+
+      selectFloor = function(targetFloor) {
+        player.floor = targetFloor;
+        player.pos.y = targetFloor * FLOOR_HEIGHT + EYE_HEIGHT;
+        if (state.monsterState === 'chase') state.monsterState = 'patrol';
+        document.getElementById('floor-ui').innerText = `${player.floor + 1}F`;
+        closeElevatorUI();
+      };
+
+      function toggleDoor(door) {
+        door.isOpen = !door.isOpen;
+        door.group.rotation.y = door.isOpen ? Math.PI / 2 : 0;
+        door.box.setFromObject(door.panel);
+      }
+
+      function useCamera() {
+        if (!state.hasCamera || state.cameraAmmo <= 0) return;
+        state.cameraAmmo--;
+        document.getElementById('cam-info').innerText = `${state.cameraAmmo} / 5`;
+
+        const flash = document.getElementById('flash');
+        flash.style.opacity = '1';
+        setTimeout(() => { flash.style.opacity = '0'; }, 100);
+
+        if (player.floor === monster.floor && player.pos.distanceTo(monster.pos) < 18) {
+          state.monsterState = 'stunned';
+          monster.stunTimer = 3.0;
+        }
+      }
+
+      function placeTrap() {
+        if (!state.trapCrafted || state.trapPlaced) return;
+        state.trapPlaced = true;
+        trap.active = true;
+        trap.pos.copy(player.pos);
+        trap.pos.y = player.floor * FLOOR_HEIGHT + 0.05;
+        trap.mesh.position.copy(trap.pos);
+        trap.mesh.visible = true;
+      }
+
+      function resolveCollision(pos, radius, currentFloor, isMonster = false) {
+        const pBox = new THREE.Box3(
+          new THREE.Vector3(pos.x - radius, pos.y - EYE_HEIGHT + 0.1, pos.z - radius),
+          new THREE.Vector3(pos.x + radius, pos.y + 0.2, pos.z + radius)
+        );
+
+        for (let item of collisionBoxes) {
+          if (item.floor === currentFloor && pBox.intersectsBox(item.box)) {
+            const box = item.box;
+            const overlapX = Math.min(pBox.max.x - box.min.x, box.max.x - pBox.min.x);
+            const overlapZ = Math.min(pBox.max.z - box.min.z, box.max.z - pBox.min.z);
+            if (overlapX < overlapZ) {
+              pos.x += (pos.x > (box.min.x + box.max.x) / 2) ? overlapX : -overlapX;
+            } else {
+              pos.z += (pos.z > (box.min.z + box.max.z) / 2) ? overlapZ : -overlapZ;
+            }
+          }
+        }
+
+        doors.forEach(door => {
+          if (door.floor === currentFloor) {
+            // 怪物が近づいたらドアを自動開錠・オープンして進む！
+            if (isMonster && monster.pos.distanceTo(door.pos) < 2.8 && !door.isOpen) {
+              toggleDoor(door);
+            }
+
+            door.box.setFromObject(door.panel);
+            if (!door.isOpen && pBox.intersectsBox(door.box)) {
+              const box = door.box;
+              const overlapX = Math.min(pBox.max.x - box.min.x, box.max.x - pBox.min.x);
+              const overlapZ = Math.min(pBox.max.z - box.min.z, box.max.z - pBox.min.z);
+              if (overlapX < overlapZ) {
+                pos.x += (pos.x > (box.min.x + box.max.x) / 2) ? overlapX : -overlapX;
+              } else {
+                pos.z += (pos.z > (box.min.z + box.max.z) / 2) ? overlapZ : -overlapZ;
+              }
+            }
+          }
+        });
+      }
+
+      const clock = new THREE.Clock();
+
+      function animate() {
+        requestAnimationFrame(animate);
+        const delta = Math.min(clock.getDelta(), 0.1);
+
+        if (state.startTime > 0 && !state.gameOver && !state.gameClear) {
+          state.elapsedTime = (Date.now() - state.startTime) / 1000;
+          document.getElementById('timer-ui').innerText = formatTime(state.elapsedTime);
+
+          if (!state.elevatorOpen && !state.cctvActive) {
+            let isSprinting = keys['ShiftLeft'] && state.stamina > 0;
+            let currentSpeed = isSprinting ? player.speed * 1.4 : player.speed;
+
+            let moveDir = new THREE.Vector3();
+            if (keys['KeyW']) moveDir.z -= 1;
+            if (keys['KeyS']) moveDir.z += 1;
+            if (keys['KeyA']) moveDir.x -= 1;
+            if (keys['KeyD']) moveDir.x += 1;
+
+            if (moveDir.lengthSq() > 0) {
+              moveDir.normalize();
+              moveDir.applyAxisAngle(new THREE.Vector3(0, 1, 0), player.yaw);
+              player.pos.addScaledVector(moveDir, currentSpeed * delta);
+            }
+
+            if (isSprinting && moveDir.lengthSq() > 0) {
+              state.stamina = Math.max(0, state.stamina - delta * 35);
+            } else {
+              state.stamina = Math.min(100, state.stamina + delta * 20);
+            }
+
+            resolveCollision(player.pos, player.radius, player.floor, false);
+
+            const distToElevator = new THREE.Vector2(player.pos.x, player.pos.z).distanceTo(new THREE.Vector2(elevatorPos.x, elevatorPos.z));
+            state.inElevatorArea = (distToElevator < 2.0);
+
+            const distToConsole = player.pos.distanceTo(cctvConsolePos);
+            state.inCCTVArea = (player.floor === 0 && distToConsole < 2.0);
+
+            state.activeDoor = null;
+            doors.forEach(door => {
+              if (door.floor === player.floor && player.pos.distanceTo(door.pos) < 2.5) {
+                state.activeDoor = door;
+              }
+            });
+
+            const promptEl = document.getElementById('action-prompt');
+            if (state.inCCTVArea) {
+              promptEl.innerText = "[E] 監視カメラを覗く";
+              promptEl.style.display = 'block';
+            } else if (state.inElevatorArea) {
+              promptEl.innerText = "[E] エレベーターに乗る";
+              promptEl.style.display = 'block';
+            } else if (state.activeDoor) {
+              promptEl.innerText = state.activeDoor.isOpen ? "[E] 扉を閉める" : "[E] 扉を開ける";
+              promptEl.style.display = 'block';
+            } else {
+              promptEl.style.display = 'none';
+            }
+
+            camera.rotation.set(player.pitch, player.yaw, 0, 'YXZ');
+            camera.position.copy(player.pos);
+
+            playerLight.position.copy(player.pos);
+            flashlight.position.copy(player.pos);
+            const forward = new THREE.Vector3(0, 0, -1).applyEuler(camera.rotation);
+            flashlight.target.position.copy(player.pos).add(forward.clone().multiplyScalar(10));
+            flashlight.target.updateMatrixWorld();
+          }
+
+          if (state.cctvActive) {
+            const floorY = state.cctvFloor * FLOOR_HEIGHT;
+            camera.position.set(MAP_HALF - 3.0, floorY + 12.0, MAP_HALF - 3.0);
+            camera.lookAt(0, floorY + 1.0, 0);
+
+            cctvLight.position.set(0, floorY + 10.0, 0);
+            cctvLight.intensity = 2.5;
+          }
+
+          if (!state.hasCamera && player.floor === 0 && player.pos.distanceTo(camGroup.position) < 2.2) {
+            state.hasCamera = true;
+            state.cameraAmmo = 5;
+            camGroup.visible = false;
+            document.getElementById('cam-info').innerText = '5 / 5 (所持中)';
+            document.getElementById('cam-info').style.color = '#00ffcc';
+          }
+
+          items.forEach(item => {
+            if (!item.collected && player.pos.distanceTo(item.pos) < 1.8) {
+              item.collected = true;
+              item.mesh.visible = false;
+              state.trapParts++;
+              document.getElementById('parts-count').innerText = state.trapParts;
+              if (state.trapParts >= 10) state.trapCrafted = true;
+            }
+          });
+
+          // 怪物の思考・階層巡回・スタック回避AI
+          monster.pos.y = monster.floor * FLOOR_HEIGHT + EYE_HEIGHT;
+
+          // 1. 階層ワープ/巡回処理（12~18秒ごとに階層移動）
+          if (state.monsterState === 'patrol') {
+            monster.floorChangeTimer -= delta;
+            if (monster.floorChangeTimer <= 0) {
+              monster.floorChangeTimer = 12 + Math.random() * 6;
+              // 60%の確率でプレイヤーのいる階に、40%でランダムな階に移動
+              if (Math.random() < 0.6) {
+                monster.floor = player.floor;
+              } else {
+                monster.floor = Math.floor(Math.random() * NUM_FLOORS);
+              }
+              monster.patrolIndex = Math.floor(Math.random() * patrolWaypoints.length);
+              const target = patrolWaypoints[monster.patrolIndex];
+              monster.pos.set(target.x, monster.floor * FLOOR_HEIGHT + EYE_HEIGHT, target.z);
+            }
+          }
+
+          // 2. スタック（壁や部屋での引っ掛かり）検知
+          if (monster.pos.distanceTo(monster.lastPos) < 0.02) {
+            monster.stuckTimer += delta;
+            if (monster.stuckTimer > 0.8) { // 0.8秒立ち止まったら新しい目的地へ切替
+              monster.patrolIndex = (monster.patrolIndex + 1) % patrolWaypoints.length;
+              monster.stuckTimer = 0;
+            }
+          } else {
+            monster.stuckTimer = 0;
+          }
+          monster.lastPos.copy(monster.pos);
+
+          // 3. 視界・追跡ロジック
+          if (monster.floor === player.floor) {
+            let dist = monster.pos.distanceTo(player.pos);
+            if (dist < 15 && state.monsterState !== 'stunned') {
+              state.monsterState = 'chase';
+            }
+          } else {
+            if (state.monsterState === 'chase') state.monsterState = 'patrol';
+          }
+
+          // 4. 怪物行動の更新
+          if (state.monsterState === 'stunned') {
+            monster.stunTimer -= delta;
+            if (monster.stunTimer <= 0) state.monsterState = 'patrol';
+          } else if (state.monsterState === 'chase' && monster.floor === player.floor) {
+            document.getElementById('alert-status').innerText = '警戒度: CHASE';
+            document.getElementById('alert-status').style.color = '#ff1133';
+
+            let mDir = new THREE.Vector3().subVectors(player.pos, monster.pos);
+            mDir.y = 0; mDir.normalize();
+            monster.pos.addScaledVector(mDir, monster.speed * delta);
+            resolveCollision(monster.pos, monster.radius, monster.floor, true);
+
+            if (monster.pos.distanceTo(player.pos) < 1.5) {
+              state.gameOver = true;
+              document.getElementById('gameover-screen').style.display = 'flex';
+              document.exitPointerLock();
+            }
+          } else {
+            document.getElementById('alert-status').innerText = '警戒度: SAFE';
+            document.getElementById('alert-status').style.color = '#00ffcc';
+
+            let target = patrolWaypoints[monster.patrolIndex];
+            target.y = monster.floor * FLOOR_HEIGHT + EYE_HEIGHT;
+            let mDir = new THREE.Vector3().subVectors(target, monster.pos);
+            mDir.y = 0;
+            if (mDir.lengthSq() < 1.0) {
+              monster.patrolIndex = (monster.patrolIndex + 1) % patrolWaypoints.length;
+            } else {
+              mDir.normalize();
+              monster.pos.addScaledVector(mDir, (monster.speed * 0.7) * delta);
+              resolveCollision(monster.pos, monster.radius, monster.floor, true);
+            }
+          }
+
+          monsterGroup.position.copy(monster.pos);
+
+          if (trap.active && monster.pos.distanceTo(trap.pos) < 1.8 && monster.floor === player.floor) {
+            state.gameClear = true;
+            document.getElementById('final-time').innerText = formatTime(state.elapsedTime);
+            document.getElementById('clear-screen').style.display = 'flex';
+            document.exitPointerLock();
+          }
+        }
+
+        renderer.render(scene, camera);
+      }
+
+      window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      });
+
+      animate();
+    }
+  </script>
+</body>
+</html>
