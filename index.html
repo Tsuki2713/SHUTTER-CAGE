@@ -2841,7 +2841,13 @@
 
 
       /*
-       * PCクリック
+       * 作戦開始
+       *
+       * PCとスマホでイベントを分けず、
+       * clickだけを使う。
+       * pointerup / touchendを重ねると、
+       * PCブラウザによってはクリックが正常に
+       * 伝わらない場合があるため。
        */
 
       startButton.addEventListener(
@@ -2853,43 +2859,6 @@
 
           startGame();
 
-        }
-      );
-
-
-      /*
-       * スマホ・タブレット
-       */
-
-      startButton.addEventListener(
-        'pointerup',
-        function(e) {
-
-          e.preventDefault();
-          e.stopPropagation();
-
-          startGame();
-
-        }
-      );
-
-
-      /*
-       * iPhone / Android向け
-       */
-
-      startButton.addEventListener(
-        'touchend',
-        function(e) {
-
-          e.preventDefault();
-          e.stopPropagation();
-
-          startGame();
-
-        },
-        {
-          passive: false
         }
       );
 
