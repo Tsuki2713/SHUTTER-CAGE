@@ -2304,131 +2304,130 @@
         );
 
 
-      let lookPointer = null;
-
-      let lastX = 0;
-
-      let lastY = 0;
+      /*
+       * スマホ視点操作
+       * Touch Eventsを使って、右側を指でドラッグすると
+       * 確実にカメラを動かす。
+       */
+      let lookTouchId = null;
+      let lastTouchX = 0;
+      let lastTouchY = 0;
 
 
       look.addEventListener(
-        'pointerdown',
+        'touchstart',
         function(e) {
+
+          if (
+            state.elevatorOpen ||
+            state.cctvActive ||
+            lookTouchId !== null
+          ) {
+            return;
+          }
+
+          const touch = e.changedTouches[0];
+
+          if (!touch) {
+            return;
+          }
+
+          lookTouchId = touch.identifier;
+          lastTouchX = touch.clientX;
+          lastTouchY = touch.clientY;
+
+          e.preventDefault();
+
+        },
+        { passive: false }
+      );
+
+
+      look.addEventListener(
+        'touchmove',
+        function(e) {
+
+          if (lookTouchId === null) {
+            return;
+          }
 
           if (
             state.elevatorOpen ||
             state.cctvActive
           ) {
-
             return;
-
           }
 
+          let touch = null;
 
-          lookPointer =
-            e.pointerId;
+          for (let i = 0; i < e.changedTouches.length; i++) {
+            if (
+              e.changedTouches[i].identifier ===
+              lookTouchId
+            ) {
+              touch = e.changedTouches[i];
+              break;
+            }
+          }
 
+          if (!touch) {
+            return;
+          }
 
-          lastX =
-            e.clientX;
+          const dx = touch.clientX - lastTouchX;
+          const dy = touch.clientY - lastTouchY;
 
+          lastTouchX = touch.clientX;
+          lastTouchY = touch.clientY;
 
-          lastY =
-            e.clientY;
+          player.yaw -= dx * 0.006;
+          player.pitch -= dy * 0.006;
 
-
-          look.setPointerCapture(
-            e.pointerId
+          player.pitch = Math.max(
+            -Math.PI / 2.3,
+            Math.min(
+              Math.PI / 2.3,
+              player.pitch
+            )
           );
 
-
           e.preventDefault();
 
-        }
+        },
+        { passive: false }
       );
 
 
-      look.addEventListener(
-        'pointermove',
-        function(e) {
+      function resetLookTouch(e) {
 
+        if (lookTouchId === null) {
+          return;
+        }
+
+        for (let i = 0; i < e.changedTouches.length; i++) {
           if (
-            e.pointerId !==
-            lookPointer
+            e.changedTouches[i].identifier ===
+            lookTouchId
           ) {
-
-            return;
-
+            lookTouchId = null;
+            break;
           }
-
-
-          if (
-            state.elevatorOpen ||
-            state.cctvActive
-          ) {
-
-            return;
-
-          }
-
-
-          const dx =
-            e.clientX - lastX;
-
-
-          const dy =
-            e.clientY - lastY;
-
-
-          lastX =
-            e.clientX;
-
-
-          lastY =
-            e.clientY;
-
-
-          player.yaw -=
-            dx * 0.006;
-
-
-          player.pitch -=
-            dy * 0.006;
-
-
-          player.pitch =
-            Math.max(
-              -Math.PI / 2.3,
-              Math.min(
-                Math.PI / 2.3,
-                player.pitch
-              )
-            );
-
-
-          e.preventDefault();
-
         }
+
+      }
+
+
+      look.addEventListener(
+        'touchend',
+        resetLookTouch,
+        { passive: false }
       );
 
 
       look.addEventListener(
-        'pointerup',
-        function() {
-
-          lookPointer = null;
-
-        }
-      );
-
-
-      look.addEventListener(
-        'pointercancel',
-        function() {
-
-          lookPointer = null;
-
-        }
+        'touchcancel',
+        resetLookTouch,
+        { passive: false }
       );
 
 
