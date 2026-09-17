@@ -408,24 +408,6 @@
       pointer-events: none;
     }
 
-
-    /* ===== オンライン対戦 ===== */
-    #mode-screen, #online-menu, #online-lobby {
-      position: absolute; inset: 0; z-index: 40;
-      background: rgba(10,15,24,.97); display: none;
-      flex-direction: column; justify-content: center; align-items: center;
-      color: #fff; text-align: center; padding: 20px; overflow: auto;
-    }
-    #mode-screen { display:flex; }
-    .online-panel { width:min(520px,94vw); border:1px solid #00ffcc; border-radius:12px; padding:20px; background:rgba(0,255,204,.04); }
-    .online-input { width:100%; padding:12px 14px; margin-top:10px; background:#101923; color:#fff; border:1px solid #00aaaa; border-radius:8px; font-size:16px; outline:none; }
-    .online-code { font:bold 34px monospace; letter-spacing:6px; color:#00ffcc; margin:14px 0; }
-    #online-player-list { list-style:none; margin:14px 0; text-align:left; }
-    #online-player-list li { padding:9px 12px; margin:6px 0; border:1px solid rgba(0,255,204,.35); border-radius:7px; background:rgba(0,0,0,.3); }
-    #online-status, #online-lobby-status { min-height:24px; margin-top:10px; color:#aaa; font:13px monospace; white-space:pre-wrap; }
-    #online-role-ui { position:absolute; top:78px; left:20px; z-index:6; padding:7px 11px; border:1px solid #00ffcc; border-radius:7px; background:rgba(0,0,0,.72); color:#00ffcc; font:bold 13px monospace; display:none; pointer-events:none; }
-    @media (max-width:900px),(pointer:coarse){ #online-role-ui{top:52px;left:10px;font-size:10px;} }
-
     /* ===== 縦画面案内 ===== */
 
     #rotate-device {
@@ -588,7 +570,7 @@
     </div>
 
     <div id="cctv-controls">
-      [A/Dまたは←/→]: 階層切替 | [E]: 監視終了
+      [A/Dまたは←/→]: 階層切替　|　[E]: 監視終了
     </div>
 
   </div>
@@ -647,42 +629,6 @@
     </button>
 
   </div>
-
-
-  <div id="mode-screen">
-    <h1 style="letter-spacing:3px;color:#00ffcc;font-size:32px;">SHUTTER &amp; CAGE</h1>
-    <p style="margin-top:10px;color:#aaa;">ゲームモードを選択</p>
-    <button id="offline-mode-btn" class="action-btn">オフライン</button>
-    <button id="online-mode-btn" class="action-btn" style="background:#1e293b;color:#00ffcc;border:1px solid #00ffcc;">オンライン対戦</button>
-  </div>
-
-  <div id="online-menu">
-    <div class="online-panel">
-      <h2 style="color:#00ffcc;">ONLINE MATCH</h2>
-      <p style="margin-top:8px;color:#aaa;font-size:13px;">鬼1人 vs 人間1～4人 / 最大5人</p>
-      <input id="online-name" class="online-input" maxlength="16" placeholder="プレイヤー名" value="Player">
-      <button id="create-room-btn" class="action-btn">部屋を作る</button>
-      <div style="margin:12px 0;color:#555;">──────── または ────────</div>
-      <input id="room-code-input" class="online-input" maxlength="6" placeholder="部屋コード 例: A1B2C3">
-      <button id="join-room-btn" class="action-btn" style="background:#1e293b;color:#00ffcc;border:1px solid #00ffcc;">部屋に参加</button>
-      <button id="online-back-btn" class="action-btn" style="background:#111;color:#aaa;border:1px solid #555;">戻る</button>
-      <div id="online-status"></div>
-    </div>
-  </div>
-
-  <div id="online-lobby">
-    <div class="online-panel">
-      <h2 style="color:#00ffcc;">LOBBY</h2>
-      <div id="online-room-code" class="online-code">------</div>
-      <div style="color:#aaa;font-size:12px;">このコードを一緒に遊ぶ人へ</div>
-      <ul id="online-player-list"></ul>
-      <div id="online-lobby-status"></div>
-      <button id="online-start-btn" class="action-btn" style="display:none;">ゲーム開始</button>
-      <button id="online-ready-btn" class="action-btn" style="background:#1e293b;color:#00ffcc;border:1px solid #00ffcc;">準備OK</button>
-      <button id="online-lobby-back-btn" class="action-btn" style="background:#111;color:#aaa;border:1px solid #555;">退出</button>
-    </div>
-  </div>
-  <div id="online-role-ui">ONLINE: HUMAN</div>
 
   <!-- ===== スタート画面 ===== -->
 
@@ -868,7 +814,7 @@
     </button>
 
     <div id="mobile-help">
-      左：移動 右：視点
+      左：移動　右：視点
     </div>
 
   </div>
@@ -940,46 +886,6 @@
     let selectFloor;
     let closeElevatorUI;
 
-    const ONLINE_SERVER = 'wss://shutter-cage-server.onrender.com';
-    let onlineMode=false, onlineSocket=null, onlinePlayerId=null, onlineRole='human';
-    let onlineRoomCode='', onlineHostId=null, onlineStarted=false, onlineWinner=null;
-    let onlinePlayers=new Map(), onlineItems=Array(10).fill(false), onlineTrap=null;
-    let onlineCollectSent=new Set(), onlineLastSend=0, onlineStunnedUntil=0;
-    let remotePlayerMeshes=new Map();
-    let onlineScene=null, onlinePlayerRef=null, onlineMonsterRef=null, onlineMonsterGroupRef=null;
-    let onlineItemsRef=null, onlineTrapRef=null, onlineStateRef=null, onlineDoorsRef=null, onlineStartLocalGame=null;
-    function formatOnlineTime(seconds){const m=Math.floor(seconds/60).toString().padStart(2,'0');const ss=Math.floor(seconds%60).toString().padStart(2,'0');return `${m}:${ss}`;}
-    function onlineSend(data){if(onlineSocket&&onlineSocket.readyState===WebSocket.OPEN)onlineSocket.send(JSON.stringify(data));}
-    function setOnlineStatus(t){const e=document.getElementById('online-status');if(e)e.innerText=t||'';}
-    function setLobbyStatus(t){const e=document.getElementById('online-lobby-status');if(e)e.innerText=t||'';}
-    function connectOnline(action,code){
-      onlineMode=true;setOnlineStatus('サーバーに接続中...');
-      if(onlineSocket&&onlineSocket.readyState<=1)onlineSocket.close();
-      onlineSocket=new WebSocket(ONLINE_SERVER);
-      onlineSocket.onopen=function(){const name=document.getElementById('online-name').value.trim()||'Player';onlineSend(action==='create'?{type:'createRoom',name}:{type:'joinRoom',name,roomCode:String(code).trim().toUpperCase()});};
-      onlineSocket.onmessage=function(e){try{handleOnlineMessage(JSON.parse(e.data));}catch(_){}};
-      onlineSocket.onerror=function(){setOnlineStatus('サーバーに接続できませんでした。');};
-      onlineSocket.onclose=function(){if(!onlineStarted)setLobbyStatus('サーバーとの接続が切れました。');};
-    }
-    function handleOnlineMessage(d){
-      if(d.type==='error'){setOnlineStatus(d.message||'エラー');setLobbyStatus(d.message||'エラー');return;}
-      if(d.type==='roomCreated'||d.type==='roomJoined'){onlineRoomCode=d.roomCode;onlinePlayerId=d.playerId;document.getElementById('online-menu').style.display='none';document.getElementById('online-lobby').style.display='flex';document.getElementById('online-room-code').innerText=d.roomCode;setOnlineStatus('');return;}
-      if(d.type==='roomState'){onlineRoomCode=d.roomCode||onlineRoomCode;onlineHostId=d.hostId||null;if(Array.isArray(d.items))onlineItems=d.items.slice();onlineTrap=d.trap||null;onlinePlayers.clear();(d.players||[]).forEach(p=>onlinePlayers.set(p.id,p));renderOnlineLobby();syncRemoteMeshes();return;}
-      if(d.type==='gameStarted'){onlineStarted=true;onlinePlayerId=d.playerId;onlineRole=d.role||'human';onlineWinner=null;onlineItems=Array(10).fill(false);onlineTrap=null;onlineCollectSent.clear();onlinePlayers.clear();(d.players||[]).forEach(p=>onlinePlayers.set(p.id,p));document.getElementById('online-lobby').style.display='none';document.getElementById('online-role-ui').style.display='block';document.getElementById('online-role-ui').innerText=onlineRole==='killer'?'ONLINE: 鬼':'ONLINE: 人間';if(onlineStartLocalGame)onlineStartLocalGame();syncRemoteMeshes();return;}
-      if(d.type==='playersState'){onlinePlayers.clear();(d.players||[]).forEach(p=>onlinePlayers.set(p.id,p));syncRemoteMeshes();updateOnlineWorld();return;}
-      if(d.type==='itemCollected'){onlineItems=Array.isArray(d.items)?d.items.slice():onlineItems;const i=Number(d.index);if(Number.isInteger(i)&&onlineItemsRef&&onlineItemsRef[i]){onlineItemsRef[i].collected=true;onlineItemsRef[i].mesh.visible=false;}updatePartsUI();return;}
-      if(d.type==='trapPlaced'){onlineTrap=d.trap;if(onlineTrapRef){onlineTrapRef.active=true;onlineTrapRef.pos.set(d.trap.x,d.trap.y,d.trap.z);onlineTrapRef.mesh.position.copy(onlineTrapRef.pos);onlineTrapRef.mesh.visible=true;}if(onlineStateRef){onlineStateRef.trapPlaced=true;onlineStateRef.trapCrafted=true;}return;}
-      if(d.type==='killerStunned'){onlineStunnedUntil=Number(d.until)||0;return;}
-      if(d.type==='door'){const x=onlineDoorsRef&&onlineDoorsRef[d.index];if(x&&x.isOpen!==!!d.open&&window._toggleOnlineDoor)window._toggleOnlineDoor(x,false);return;}
-      if(d.type==='playerCaught'||d.type==='caught'){if(d.playerId){const q=onlinePlayers.get(d.playerId);if(q)q.alive=false;syncRemoteMeshes();}if(d.playerId===onlinePlayerId||d.type==='caught'){onlineStateRef.gameOver=true;document.getElementById('gameover-screen').style.display='flex';if(document.pointerLockElement)document.exitPointerLock();}return;}
-      if(d.type==='gameOver'){onlineWinner=d.winner;onlineStateRef.gameOver=true;if(d.winner==='humans'){document.getElementById('clear-screen').style.display='flex';document.getElementById('final-time').innerText=formatOnlineTime(onlineStateRef.elapsedTime);}else document.getElementById('gameover-screen').style.display='flex';if(document.pointerLockElement)document.exitPointerLock();}
-    }
-    function renderOnlineLobby(){const list=document.getElementById('online-player-list');if(!list)return;list.innerHTML='';onlinePlayers.forEach(p=>{const li=document.createElement('li');li.innerText=p.name+(p.id===onlineHostId?' 👑':'');list.appendChild(li);});const b=document.getElementById('online-start-btn');b.style.display=onlinePlayerId===onlineHostId?'inline-block':'none';setLobbyStatus(`${onlinePlayers.size}/5 人参加中${onlinePlayers.size<2?'（2人以上で開始）':''}`);}
-    function createRemoteMesh(p){const g=new THREE.Group();const c=p.role==='killer'?0xff0022:0x00ffcc;const m=new THREE.Mesh(new THREE.CylinderGeometry(.45,.45,1.8,8),new THREE.MeshStandardMaterial({color:c,emissive:c,emissiveIntensity:.15}));m.position.y=.9;g.add(m);onlineScene.add(g);return g;}
-    function syncRemoteMeshes(){if(!onlineScene)return;const ids=new Set();onlinePlayers.forEach(p=>{if(p.id===onlinePlayerId)return;ids.add(p.id);if(!remotePlayerMeshes.has(p.id))remotePlayerMeshes.set(p.id,createRemoteMesh(p));const m=remotePlayerMeshes.get(p.id);m.position.set(p.x,p.floor*FLOOR_HEIGHT,p.z);m.visible=p.alive!==false;});for(const [id,m] of remotePlayerMeshes){if(!ids.has(id)){onlineScene.remove(m);remotePlayerMeshes.delete(id);}}}
-    function updateOnlineWorld(){if(!onlineMode||!onlineMonsterRef||!onlineMonsterGroupRef)return;const k=[...onlinePlayers.values()].find(p=>p.role==='killer');if(onlineRole!=='killer'&&k){onlineMonsterRef.pos.set(k.x,k.y,k.z);onlineMonsterRef.floor=k.floor;onlineMonsterGroupRef.position.copy(onlineMonsterRef.pos);onlineMonsterGroupRef.visible=Date.now()>=onlineStunnedUntil;}}
-    function updatePartsUI(){if(!onlineStateRef)return;onlineStateRef.trapParts=onlineItems.filter(Boolean).length;onlineStateRef.trapCrafted=onlineStateRef.trapParts>=10;document.getElementById('parts-count').innerText=onlineStateRef.trapParts;}
-    function sendOnlineState(force=false){if(!onlineMode||!onlineStarted||!onlinePlayerRef)return;const now=performance.now();if(!force&&now-onlineLastSend<50)return;onlineLastSend=now;onlineSend({type:'state',x:onlinePlayerRef.pos.x,y:onlinePlayerRef.pos.y,z:onlinePlayerRef.pos.z,yaw:onlinePlayerRef.yaw,pitch:onlinePlayerRef.pitch,floor:onlinePlayerRef.floor});}
 
     /* =====================================================
        Three.js読み込み後にゲーム開始
@@ -1026,8 +932,6 @@
 
     function initGame() {
 
-      onlinePlayerRef = player;
-      onlineStateRef = state;
       const container =
         document.getElementById(
           'canvas-container'
@@ -1040,7 +944,6 @@
 
       const scene =
         new THREE.Scene();
-      onlineScene=scene;
 
       scene.background =
         new THREE.Color(0x0a0f18);
@@ -1974,8 +1877,6 @@
       }
 
 
-      onlineDoorsRef=doors;
-
       /* =====================================================
          固定カメラ
          ===================================================== */
@@ -2101,8 +2002,6 @@
       );
 
 
-      onlineItemsRef=items;
-
       /* =====================================================
          怪異
          ===================================================== */
@@ -2146,7 +2045,6 @@
       monsterGroup.add(monsterLight);
 
       scene.add(monsterGroup);
-      onlineMonsterRef=monster;onlineMonsterGroupRef=monsterGroup;
 
 
       /* =====================================================
@@ -2186,7 +2084,6 @@
         false;
 
       scene.add(trap.mesh);
-      onlineTrapRef=trap;
 
 
       /* =====================================================
@@ -2407,130 +2304,131 @@
         );
 
 
-      /*
-       * スマホ視点操作
-       * Touch Eventsを使って、右側を指でドラッグすると
-       * 確実にカメラを動かす。
-       */
-      let lookTouchId = null;
-      let lastTouchX = 0;
-      let lastTouchY = 0;
+      let lookPointer = null;
+
+      let lastX = 0;
+
+      let lastY = 0;
 
 
       look.addEventListener(
-        'touchstart',
+        'pointerdown',
         function(e) {
-
-          if (
-            state.elevatorOpen ||
-            state.cctvActive ||
-            lookTouchId !== null
-          ) {
-            return;
-          }
-
-          const touch = e.changedTouches[0];
-
-          if (!touch) {
-            return;
-          }
-
-          lookTouchId = touch.identifier;
-          lastTouchX = touch.clientX;
-          lastTouchY = touch.clientY;
-
-          e.preventDefault();
-
-        },
-        { passive: false }
-      );
-
-
-      look.addEventListener(
-        'touchmove',
-        function(e) {
-
-          if (lookTouchId === null) {
-            return;
-          }
 
           if (
             state.elevatorOpen ||
             state.cctvActive
           ) {
+
             return;
+
           }
 
-          let touch = null;
 
-          for (let i = 0; i < e.changedTouches.length; i++) {
-            if (
-              e.changedTouches[i].identifier ===
-              lookTouchId
-            ) {
-              touch = e.changedTouches[i];
-              break;
-            }
-          }
+          lookPointer =
+            e.pointerId;
 
-          if (!touch) {
-            return;
-          }
 
-          const dx = touch.clientX - lastTouchX;
-          const dy = touch.clientY - lastTouchY;
+          lastX =
+            e.clientX;
 
-          lastTouchX = touch.clientX;
-          lastTouchY = touch.clientY;
 
-          player.yaw -= dx * 0.006;
-          player.pitch -= dy * 0.006;
+          lastY =
+            e.clientY;
 
-          player.pitch = Math.max(
-            -Math.PI / 2.3,
-            Math.min(
-              Math.PI / 2.3,
-              player.pitch
-            )
+
+          look.setPointerCapture(
+            e.pointerId
           );
+
 
           e.preventDefault();
 
-        },
-        { passive: false }
+        }
       );
 
 
-      function resetLookTouch(e) {
+      look.addEventListener(
+        'pointermove',
+        function(e) {
 
-        if (lookTouchId === null) {
-          return;
-        }
-
-        for (let i = 0; i < e.changedTouches.length; i++) {
           if (
-            e.changedTouches[i].identifier ===
-            lookTouchId
+            e.pointerId !==
+            lookPointer
           ) {
-            lookTouchId = null;
-            break;
+
+            return;
+
           }
+
+
+          if (
+            state.elevatorOpen ||
+            state.cctvActive
+          ) {
+
+            return;
+
+          }
+
+
+          const dx =
+            e.clientX - lastX;
+
+
+          const dy =
+            e.clientY - lastY;
+
+
+          lastX =
+            e.clientX;
+
+
+          lastY =
+            e.clientY;
+
+
+          player.yaw -=
+            dx * 0.006;
+
+
+          player.pitch -=
+            dy * 0.006;
+
+
+          player.pitch =
+            Math.max(
+              -Math.PI / 2.3,
+              Math.min(
+                Math.PI / 2.3,
+                player.pitch
+              )
+            );
+
+
+          e.preventDefault();
+
         }
-
-      }
-
-
-      look.addEventListener(
-        'touchend',
-        resetLookTouch,
-        { passive: false }
       );
 
 
       look.addEventListener(
-        'touchcancel',
-        resetLookTouch,
-        { passive: false }
+        'pointerup',
+        function() {
+
+          lookPointer = null;
+
+        }
+      );
+
+
+      look.addEventListener(
+        'pointercancel',
+        function() {
+
+          lookPointer = null;
+
+        }
       );
 
 
@@ -2894,11 +2792,6 @@
 
         gameStarted = true;
 
-        if(onlineMode){
-          updatePartsUI();
-          if(onlineTrap){trap.active=true;trap.pos.set(onlineTrap.x,onlineTrap.y,onlineTrap.z);trap.mesh.position.copy(trap.pos);trap.mesh.visible=true;state.trapPlaced=true;}
-        }
-
 
         const startScreen =
           document.getElementById(
@@ -2946,8 +2839,6 @@
 
       }
 
-
-      onlineStartLocalGame=startGame;
 
       /*
        * 作戦開始
@@ -3142,13 +3033,23 @@
          ドア
          ===================================================== */
 
-      function toggleDoor(door, syncOnline=true) {
-        door.isOpen=!door.isOpen;
-        door.group.rotation.y=door.isOpen?Math.PI/2:0;
-        door.box.setFromObject(door.panel);
-        if(onlineMode&&syncOnline){const index=doors.indexOf(door);if(index>=0)onlineSend({type:'door',index,open:door.isOpen});}
+      function toggleDoor(door) {
+
+        door.isOpen =
+          !door.isOpen;
+
+
+        door.group.rotation.y =
+          door.isOpen
+            ? Math.PI / 2
+            : 0;
+
+
+        door.box.setFromObject(
+          door.panel
+        );
+
       }
-      window._toggleOnlineDoor=toggleDoor;
 
 
       /* =====================================================
@@ -3156,10 +3057,6 @@
          ===================================================== */
 
       function useCamera() {
-
-        if(onlineMode&&onlineRole==='killer')return;
-
-        if (onlineMode && onlineRole === 'killer') return;
 
         if (
           !state.hasCamera ||
@@ -3203,11 +3100,21 @@
         );
 
 
-        if (onlineMode) {
-          onlineSend({type:'flash'});
-        } else if (player.floor===monster.floor && player.pos.distanceTo(monster.pos)<18) {
-          state.monsterState='stunned';
-          monster.stunTimer=3.0;
+        if (
+          player.floor ===
+            monster.floor &&
+          player.pos.distanceTo(
+            monster.pos
+          ) < 18
+        ) {
+
+          state.monsterState =
+            'stunned';
+
+
+          monster.stunTimer =
+            3.0;
+
         }
 
       }
@@ -3218,9 +3125,44 @@
          ===================================================== */
 
       function placeTrap() {
-        if(!state.trapCrafted||state.trapPlaced)return;
-        if(onlineMode){onlineSend({type:'placeTrap'});return;}
-        state.trapPlaced=true;trap.active=true;trap.pos.copy(player.pos);trap.pos.y=player.floor*FLOOR_HEIGHT+0.05;trap.mesh.position.copy(trap.pos);trap.mesh.visible=true;
+
+        if (
+          !state.trapCrafted ||
+          state.trapPlaced
+        ) {
+
+          return;
+
+        }
+
+
+        state.trapPlaced =
+          true;
+
+
+        trap.active =
+          true;
+
+
+        trap.pos.copy(
+          player.pos
+        );
+
+
+        trap.pos.y =
+          player.floor *
+          FLOOR_HEIGHT +
+          0.05;
+
+
+        trap.mesh.position.copy(
+          trap.pos
+        );
+
+
+        trap.mesh.visible =
+          true;
+
       }
 
 
@@ -3856,7 +3798,7 @@
              パーツ回収
              =============================== */
 
-          if(!onlineMode) items.forEach(
+          items.forEach(
             function(item) {
 
               if (
@@ -3902,28 +3844,8 @@
 
 
           /* =================================================
-             オンライン対戦
+             怪異AI
              ================================================= */
-          if(onlineMode){
-            updateOnlineWorld();
-            if(onlineRole==='killer'){
-              monster.pos.copy(player.pos);monster.floor=player.floor;monsterGroup.position.copy(monster.pos);monsterGroup.visible=true;
-              document.getElementById('alert-status').innerText='役割: 鬼';document.getElementById('alert-status').style.color='#ff1133';
-            }else{
-              document.getElementById('alert-status').innerText=Date.now()<onlineStunnedUntil?'鬼: STUNNED':'鬼: ONLINE';
-              document.getElementById('alert-status').style.color=Date.now()<onlineStunnedUntil?'#00ffcc':'#ffcc00';
-            }
-            sendOnlineState();
-            if(onlineRole==='human'&&state.trapParts<10){
-              items.forEach(function(item,index){if(!item.collected&&!onlineCollectSent.has(index)&&player.pos.distanceTo(item.pos)<1.8){onlineCollectSent.add(index);onlineSend({type:'collectItem',index});}});
-            }
-          }
-
-          /* =================================================
-             怪異AI（オフラインのみ）
-             ================================================= */
-          if(!onlineMode){
-
 
           monster.pos.y =
             monster.floor *
@@ -4282,6 +4204,7 @@
 
           }
 
+
           /* 怪異を画面へ反映 */
 
           monsterGroup.position.copy(
@@ -4294,7 +4217,6 @@
              =============================== */
 
           if (
-            !onlineMode &&
             trap.active &&
             monster.pos.distanceTo(
               trap.pos
@@ -4335,11 +4257,6 @@
 
           }
 
-          if(onlineMode){
-            updatePartsUI();
-            if(onlineTrap){trap.active=true;trap.pos.set(onlineTrap.x,onlineTrap.y,onlineTrap.z);trap.mesh.position.copy(trap.pos);trap.mesh.visible=true;}
-          }
-
         }
 
 
@@ -4377,38 +4294,12 @@
 
 
       /* =====================================================
-         オンラインUI
-         ===================================================== */
-      document.getElementById('offline-mode-btn').addEventListener('click',function(){document.getElementById('mode-screen').style.display='none';document.getElementById('start-screen').style.display='flex';});
-      document.getElementById('online-mode-btn').addEventListener('click',function(){document.getElementById('mode-screen').style.display='none';document.getElementById('online-menu').style.display='flex';});
-      document.getElementById('online-back-btn').addEventListener('click',function(){onlineMode=false;document.getElementById('online-menu').style.display='none';document.getElementById('mode-screen').style.display='flex';});
-      document.getElementById('create-room-btn').addEventListener('click',function(){connectOnline('create');});
-      document.getElementById('join-room-btn').addEventListener('click',function(){const c=document.getElementById('room-code-input').value.trim();if(c.length<4){setOnlineStatus('部屋コードを入力してください。');return;}connectOnline('join',c);});
-      document.getElementById('online-ready-btn').addEventListener('click',function(){onlineSend({type:'ready',ready:true});setLobbyStatus('準備OK。ホストの開始を待っています。');});
-      document.getElementById('online-start-btn').addEventListener('click',function(){onlineSend({type:'startGame'});});
-      document.getElementById('online-lobby-back-btn').addEventListener('click',function(){onlineSend({type:'leaveRoom'});if(onlineSocket)onlineSocket.close();onlineMode=false;onlineStarted=false;document.getElementById('online-lobby').style.display='none';document.getElementById('online-menu').style.display='flex';});
-
-      /* =====================================================
-         オンラインUI
-         ===================================================== */
-      document.getElementById('offline-mode-btn').addEventListener('click',function(){document.getElementById('mode-screen').style.display='none';document.getElementById('start-screen').style.display='flex';});
-      document.getElementById('online-mode-btn').addEventListener('click',function(){document.getElementById('mode-screen').style.display='none';document.getElementById('online-menu').style.display='flex';});
-      document.getElementById('online-back-btn').addEventListener('click',function(){onlineMode=false;document.getElementById('online-menu').style.display='none';document.getElementById('mode-screen').style.display='flex';});
-      document.getElementById('create-room-btn').addEventListener('click',function(){connectOnline('create');});
-      document.getElementById('join-room-btn').addEventListener('click',function(){const c=document.getElementById('room-code-input').value.trim();if(c.length<4){setOnlineStatus('部屋コードを入力してください。');return;}connectOnline('join',c);});
-      document.getElementById('online-ready-btn').addEventListener('click',function(){onlineSend({type:'ready',ready:true});setLobbyStatus('準備OK。ホストの開始を待っています。');});
-      document.getElementById('online-start-btn').addEventListener('click',function(){onlineSend({type:'startGame'});});
-      document.getElementById('online-lobby-back-btn').addEventListener('click',function(){onlineSend({type:'leaveRoom'});if(onlineSocket)onlineSocket.close();onlineMode=false;onlineStarted=false;document.getElementById('online-lobby').style.display='none';document.getElementById('online-menu').style.display='flex';});
-
-      /* =====================================================
          ゲーム開始
          ===================================================== */
 
       animate();
 
     }
-
-  }
 
   </script>
 
